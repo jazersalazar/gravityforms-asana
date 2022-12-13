@@ -4,7 +4,12 @@ function asana_addon_advanced_settings( $position, $form_id ) {
     //create settings on position -1 (bottom of advanced setting tab page)
     if ( $position == -1 ) :
         $form = GFAPI::get_form( $form_id );
-        $fields = (new GFAsanaAddOn())->get_asana_project_fields( $form ); ?>
+        $gfaa = new GFAsanaAddOn();
+
+        // Do not display field settings if it's not asana form
+        if ( !$gfaa->is_asana_form( $form ) ) return;
+
+        $fields = $gfaa->get_asana_project_fields( $form ); ?>
 
         <li class="project_field_setting field_setting">
             <label for="field_project_field" class="section_label">Asana Project Field</label>
@@ -87,5 +92,8 @@ function asana_addon_after_save_form( $form, $is_new ) {
 
 add_filter( 'gform_after_submission', 'asana_addon_create_task', 10, 2 );
 function asana_addon_create_task( $entry, $form ) {
-    (new GFAsanaAddOn())->create_asana_task( $entry, $form );
+    $gfaa = new GFAsanaAddOn();
+    if ( $gfaa->is_asana_form( $form ) ) {
+        $gfaa->create_asana_task( $entry, $form );
+    }
 }

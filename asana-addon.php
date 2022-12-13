@@ -281,4 +281,10 @@ class GFAsanaAddOn extends GFAddOn {
 
         $new_task = $client->tasks->createTask( $new_task_options );
     }
+
+    public function is_asana_form( $form ) {
+        $settings = $this->get_form_settings( $form );
+    
+        return empty( $settings['asana_section']  ) ? false : true;
+    }
 }
