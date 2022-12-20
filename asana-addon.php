@@ -23,9 +23,14 @@ class GFAsanaAddOn extends GFAddOn {
 
     public function init() {
         parent::init();
+        add_action( 'wp_ajax_get_asana_options', array( $this, 'get_asana_options' ) );
+        add_filter( 'wp_ajax_set_asana_options',  array( $this, 'set_asana_options' ) );
     }
 
     public function scripts() {
+        // Do not include script if it's not asana addon settings page
+        if ( $_GET['subview'] != 'asana-addon' ) return  parent::scripts();
+
         $scripts = array(
             array(
                 'handle'  => 'asana_addon_js',
@@ -64,11 +69,11 @@ class GFAsanaAddOn extends GFAddOn {
     public function plugin_settings_fields() {
         return array(
             array(
-                'title'  => esc_html__( 'Asana Add-On Settings', 'asanaaddon' ),
+                'title'  => esc_html__( 'Asana Add-On Settings', 'asana-addon' ),
                 'fields' => array(
                     array(
                         'name'              => 'asana_pat',
-                        'label'             => esc_html__( 'Personal Access Token', 'asanaaddon' ),
+                        'label'             => esc_html__( 'Personal Access Token', 'asana-addon' ),
                         'type'              => 'text',
                         'class'             => 'medium',
                     ),
@@ -86,18 +91,17 @@ class GFAsanaAddOn extends GFAddOn {
             exit;
         }
 
-        $form = $this->get_current_form() ? $this->get_current_form() : $form;
         $settings = $this->get_form_settings( $form );
 
         $duedate = array(
             array(
-                'label' => 'N/A',
+                'label' => 'Please select a due date',
                 'value' => '',
             ),
         );
         foreach ( $form['fields'] as $field ) {
             $duedate[] = array(
-                'label' => esc_html__( $field['label'], 'asanaaddon' ),
+                'label' => esc_html__( $field['label'], 'asana-addon' ),
                 'value' => $field['id'],
             );
         }
@@ -105,9 +109,9 @@ class GFAsanaAddOn extends GFAddOn {
         $fields = array(
             array(
                 'name'              => 'asana_title',
-                'label'             => esc_html__( 'Title', 'asanaaddon' ),
+                'label'             => esc_html__( 'Title', 'asana-addon' ),
                 'type'              => 'text',
-                'class'             => 'medium',
+                'class'             => 'medium asana-addon-field',
                 'data-id'           => $form['id'],
             ),
             array(
@@ -115,61 +119,59 @@ class GFAsanaAddOn extends GFAddOn {
                 'label'             => 'Due Date',
                 'type'              => 'select',
                 'choices'           => $duedate,
-                'class'             => 'medium',
+                'class'             => 'medium asana-addon-field',
             ),
         );
 
         $asana_choices = array(
             'workspace',
-            'assignee',
             'project',
             'section',
+            'assignee',
         );
 
         foreach ( $asana_choices as $asana_choice ) {
-            $choices = $this->get_asana_choices( $asana_choice, $form );
+            $choices = $this->get_asana_choices( $asana_choice, $settings );
 
-            $label = esc_html__( ucwords( $asana_choice ), 'asanaaddon' );
+            $label = esc_html__( ucwords( $asana_choice ), 'asana-addon' );
             $fields[] = array(
                 'name'              => 'asana_' . $asana_choice,
                 'label'             => $label,
                 'type'              => 'select',
                 'choices'           => $choices,
-                'class'             => 'medium',
+                'class'             => 'medium asana-addon-field asana-addon-' . $asana_choice,
             );
-
-            if ( !$settings['asana_' . $asana_choice ] ) break;
         }
 
         return array(
             array(
-                'title'  => esc_html__( 'Asana Form Settings', 'asanaaddon' ),
+                'title'  => esc_html__( 'Asana Form Settings', 'asana-addon' ),
                 'fields' => $fields,
             ),
         );
     }
 
-    public function get_asana_choices( $asana_choice, $form ) {
+    public function get_asana_choices( $asana_choice, $settings ) {
         $asana_pat = $this->get_plugin_setting( 'asana_pat' );
         $client = Asana\Client::accessToken( $asana_pat );
-        $settings = $this->get_form_settings( $form );
 
         $asana_choices = array(
             array(
-                'label' => esc_html__( 'N/A', 'asanaaddon' ),
+                'label' => esc_html__( 'Please select ' . ($asana_choice == 'assignee' ? 'an ' : 'a ') . $asana_choice, 'asana-addon' ),
                 'value' => '',
                 'name'  => 'none',
             ),
         );
-    
+
+        // Return with just default choices if there's missing config
+        if ( !$settings && $asana_choice != 'workspace' ) return $asana_choices;
+        if ( !$settings['asana_workspace'] && $asana_choice != 'workspace' ) return $asana_choices;
+        if ( !$settings['asana_project'] && $asana_choice == 'section' ) return $asana_choices;
+
         $choices = array();
         switch ( $asana_choice ) {
             case 'workspace':
                 $choices = $client->workspaces->getWorkspaces();
-                break;
-            
-            case 'assignee':
-                $choices = $client->users->getUsersForWorkspace( $settings['asana_workspace'] );
                 break;
 
             case 'project':
@@ -179,11 +181,15 @@ class GFAsanaAddOn extends GFAddOn {
             case 'section':
                 $choices = $client->sections->getSectionsForProject( $settings['asana_project'], array( 'opt_expand' => 'memberships' ) );
                 break;
+
+            case 'assignee':
+                $choices = $client->users->getUsersForWorkspace( $settings['asana_workspace'] );
+                break;
         }
 
         foreach ( $choices as $choice ) {
             $asana_choices[] = array(
-                'label' => esc_html__( $choice->name, 'asanaaddon' ),
+                'label' => esc_html__( $choice->name, 'asana-addon' ),
                 'value' => $choice->gid,
                 'name'  => $choice->name,
             );
@@ -252,8 +258,12 @@ class GFAsanaAddOn extends GFAddOn {
             $field_gid = $field->project_field;
             $default_gid = $field->project_field_default_value;
             if ( $field_gid ) {
-                $value = $entry[ $field->id ];
-                $asana_fields[ $field_gid ] = $value ? $value : $default_gid;
+                $value = $entry[ $field->id ] ? $entry[ $field->id ] : $default_gid;
+
+                // Skip custom field if it doesn't have value
+                if ( !$value ) continue;
+
+                $asana_fields[ $field_gid ] = $value;
 
                 // Support date type field
                 if ( $project_fields[ $field_gid ]->type == 'date' ) {
@@ -282,9 +292,34 @@ class GFAsanaAddOn extends GFAddOn {
         $new_task = $client->tasks->createTask( $new_task_options );
     }
 
-    public function is_asana_form( $form ) {
+    public function is_asana_configured( $form ) {
         $settings = $this->get_form_settings( $form );
     
         return empty( $settings['asana_section']  ) ? false : true;
+    }
+
+    public function get_asana_options() {
+        $option     = $_POST['option'];
+        $settings   = $_POST['settings'];
+        $choices = $this->get_asana_choices( $option, $settings );
+
+        $html = '';
+        foreach ($choices as $choice) {
+            $html .= '<option value="' . $choice['value'] . '">' . $choice['label'] . '</option>';
+        }
+
+        echo $html;
+
+        wp_die();
+    }
+
+    public function set_asana_options() {
+        $form_id    = $_POST['form_id'];
+        $settings   = $_POST['settings'];
+
+        // Update the form field settings, so that gravity forms will allow to save the new option
+        $form = GFAPI::get_form( $form_id );
+        $form['asana-addon'] = $settings;
+        GFAPI::update_form( $form );
     }
 }

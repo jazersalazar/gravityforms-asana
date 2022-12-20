@@ -1,15 +1,25 @@
 <?php
+add_filter( 'gform_after_submission', 'asana_addon_create_task', 10, 2 );
+function asana_addon_create_task( $entry, $form ) {
+    $gfaa = GFAsanaAddOn::get_instance();
+
+    if ( $gfaa->is_asana_configured( $form ) ) {
+        $gfaa->create_asana_task( $entry, $form );
+    }
+}
+
+// Prevent loading the code if it's not edit page
+if ( $_GET['page'] != 'gf_edit_forms' ) return;
+
+// Check if the current form is valid asana form
+if ( !GFAsanaAddOn::get_instance()->is_asana_configured( GFAPI::get_form( $_GET['id'] ) ) ) return;
+
 add_action( 'gform_field_advanced_settings', 'asana_addon_advanced_settings', 10, 2 );
 function asana_addon_advanced_settings( $position, $form_id ) {
     //create settings on position -1 (bottom of advanced setting tab page)
     if ( $position == -1 ) :
         $form = GFAPI::get_form( $form_id );
-        $gfaa = new GFAsanaAddOn();
-
-        // Do not display field settings if it's not asana form
-        if ( !$gfaa->is_asana_form( $form ) ) return;
-
-        $fields = $gfaa->get_asana_project_fields( $form ); ?>
+        $fields = GFAsanaAddOn::get_instance()->get_asana_project_fields( $form ); ?>
 
         <li class="project_field_setting field_setting">
             <label for="field_project_field" class="section_label">Asana Project Field</label>
@@ -46,16 +56,16 @@ function asana_addon_script(){ ?>
         <?php foreach ( GF_Fields::get_all() as $gf_field ) echo 'fieldSettings.' . $gf_field->type . ' += ", .project_field_setting, .project_field_default_value_setting";'; ?>
 
         //binding to the load field settings event to initialize the field
-        jQuery(document).on("gform_load_field_settings", function(event, field, form) {
+        jQuery( document ).on( 'gform_load_field_settings', function( event, field, form ) {
             jQuery( '#field_project_field' ).val( rgar( field, 'project_field' ) ).change();
 
             let default_value = rgar( field, 'project_field_default_value' );
-            if ( jQuery('#field_project_field_default_value option[value="' + default_value + '"]').length ) {
+            if ( jQuery( '#field_project_field_default_value option[value="' + default_value + '"]' ).length ) {
                 jQuery( '#field_project_field_default_value' ).val( default_value );
             }
-        });
+        } );
 
-        jQuery(document).on('change', '#field_project_field', function() {
+        jQuery( document ).on('change', '#field_project_field', function() {
             let selected =  jQuery( this ).find( 'option:selected' );
             let options_list = '<option value="">N/A</option>';
 
@@ -64,11 +74,11 @@ function asana_addon_script(){ ?>
 
                 Object.entries( options ).forEach( ( [ key, option ] ) => {
                     options_list += '<option value="' + option.gid + '">' + option.name + '</option>';
-                });
+                } );
             }
 
             jQuery( this ).parents( 'ul' ).find( '#field_project_field_default_value' ).html( options_list );
-        });
+        } );
     </script>
     <?php
 }
@@ -90,10 +100,5 @@ function asana_addon_after_save_form( $form, $is_new ) {
     if ( $new_custom_field ) GFAPI::update_form( $form );
 }
 
-add_filter( 'gform_after_submission', 'asana_addon_create_task', 10, 2 );
-function asana_addon_create_task( $entry, $form ) {
-    $gfaa = new GFAsanaAddOn();
-    if ( $gfaa->is_asana_form( $form ) ) {
-        $gfaa->create_asana_task( $entry, $form );
-    }
-}
+// Disable form editor ajax
+add_filter( 'gform_disable_ajax_save', '__return_true' );

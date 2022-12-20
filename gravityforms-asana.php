@@ -9,7 +9,6 @@
  */
 
 require 'vendor/autoload.php';
-require 'asana-form.php';
 
 define( 'GF_ASANA_ADDON_VERSION', '0.1' );
 
@@ -22,7 +21,7 @@ class GF_Asana_AddOn_Bootstrap {
         }
 
         require_once( 'asana-addon.php' );
-
+        require_once( 'asana-form.php' );
         GFAddOn::register( 'GFAsanaAddOn' );
     }
 }
