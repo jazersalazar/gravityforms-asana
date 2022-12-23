@@ -85,19 +85,26 @@ function asana_addon_script(){ ?>
 
 add_action( 'gform_after_save_form', 'asana_addon_after_save_form', 10, 2 );
 function asana_addon_after_save_form( $form, $is_new ) {
-    $new_custom_field = false;
+    $save_form = false;
+    $gfaa = GFAsanaAddOn::get_instance();
 
     foreach ( $form['fields'] as $index => $field ) {
         if ( $field['project_field'] == 'new field' ) {
-            $new_custom_field = true;
+            $save_form = true;
 
-            $gid = (new GFAsanaAddOn())->create_asana_custom_field( $field['label'], $form );
+            $gid = $gfaa->create_asana_custom_field( $field['label'], $form );
             $form['fields'][ $index ]['project_field'] = $gid;
+        }
+
+        if ( ( $field['type'] == 'select' || $field['type'] == 'multiselect') && $field['project_field'] ) {
+            $save_form = true;
+
+            $form['fields'][ $index ]['choices'] = $gfaa->get_asana_custom_field_choices( $field['project_field'], $form );
         }
     }
 
-    // Only update form if there's new custom field
-    if ( $new_custom_field ) GFAPI::update_form( $form );
+    // Only update form if there's custom field changes
+    if ( $save_form ) GFAPI::update_form( $form );
 }
 
 // Disable form editor ajax

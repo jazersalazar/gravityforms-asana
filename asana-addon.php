@@ -208,7 +208,7 @@ class GFAsanaAddOn extends GFAddOn {
         $asana_fields = array();
         foreach ( $project_fields as $project_field ) {
             $field = $project_field->custom_field;
-            $field->options = $field->type == 'enum' ? json_encode( $field->enum_options ) : '';
+            $field->options = $field->enum_options ? json_encode( $field->enum_options ) : '';
             $asana_fields[ $field->gid ] = $field;
         }
 
@@ -233,6 +233,22 @@ class GFAsanaAddOn extends GFAddOn {
         )->custom_field->gid;
 
         return $gid;
+    }
+
+    public function get_asana_custom_field_choices( $gid, $form ) {
+        $choices = [];
+
+        $fields = $this->get_asana_project_fields( $form );
+        if ( $fields[ $gid ]->enum_options ) {
+            foreach ( $fields[ $gid ]->enum_options as $option ) {
+                $choices[] = [
+                    'value' => $option->gid,
+                    'text'  => $option->name,
+                ];
+            }
+        }
+
+        return $choices;
     }
 
     public function create_asana_task( $entry, $form ) {
@@ -270,6 +286,12 @@ class GFAsanaAddOn extends GFAddOn {
                     $asana_fields[ $field_gid ] = array(
                         "date"  => $asana_fields[ $field_gid ]
                     );
+                }
+
+                // Support multiselect type field
+                if ( $project_fields[ $field_gid ]->type == 'multi_enum' ) {
+                    $multi_value = GFAddOn::maybe_decode_json( $value);
+                    $asana_fields[ $field_gid ] = $multi_value;
                 }
             }
         }
