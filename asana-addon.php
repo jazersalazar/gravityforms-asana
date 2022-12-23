@@ -165,8 +165,8 @@ class GFAsanaAddOn extends GFAddOn {
 
         // Return with just default choices if there's missing config
         if ( !$settings && $asana_choice != 'workspace' ) return $asana_choices;
-        if ( !$settings['asana_workspace'] && $asana_choice != 'workspace' ) return $asana_choices;
-        if ( !$settings['asana_project'] && $asana_choice == 'section' ) return $asana_choices;
+        if ( ( !isset( $settings['asana_workspace'] ) || !$settings['asana_workspace'] ) && $asana_choice != 'workspace' ) return $asana_choices;
+        if ( ( !isset( $settings['asana_project'] ) || !$settings['asana_project'] ) && $asana_choice == 'section' ) return $asana_choices;
 
         $choices = array();
         switch ( $asana_choice ) {
