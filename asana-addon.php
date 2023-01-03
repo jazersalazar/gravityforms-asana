@@ -241,6 +241,8 @@ class GFAsanaAddOn extends GFAddOn {
         $fields = $this->get_asana_project_fields( $form );
         if ( $fields[ $gid ]->enum_options ) {
             foreach ( $fields[ $gid ]->enum_options as $option ) {
+                if ( !$option->enabled ) continue;
+
                 $choices[] = [
                     'value' => $option->gid,
                     'text'  => $option->name,
