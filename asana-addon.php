@@ -29,7 +29,7 @@ class GFAsanaAddOn extends GFAddOn {
 
     public function scripts() {
         // Do not include script if it's not asana addon settings page
-        if ( $_GET['subview'] != 'asana-addon' ) return  parent::scripts();
+        if ( !isset( $_GET['subview'] ) || $_GET['subview'] != 'asana-addon' ) return parent::scripts();
 
         $scripts = array(
             array(
@@ -169,30 +169,35 @@ class GFAsanaAddOn extends GFAddOn {
         if ( ( !isset( $settings['asana_project'] ) || !$settings['asana_project'] ) && $asana_choice == 'section' ) return $asana_choices;
 
         $choices = array();
-        switch ( $asana_choice ) {
-            case 'workspace':
-                $choices = $client->workspaces->getWorkspaces();
-                break;
-
-            case 'project':
-                $choices = $client->projects->getProjectsForWorkspace( $settings['asana_workspace'] );
-                break;
-            
-            case 'section':
-                $choices = $client->sections->getSectionsForProject( $settings['asana_project'], array( 'opt_expand' => 'memberships' ) );
-                break;
-
-            case 'assignee':
-                $choices = $client->users->getUsersForWorkspace( $settings['asana_workspace'] );
-                break;
-        }
-
-        foreach ( $choices as $choice ) {
-            $asana_choices[] = array(
-                'label' => esc_html__( $choice->name, 'asana-addon' ),
-                'value' => $choice->gid,
-                'name'  => $choice->name,
-            );
+        try {
+            switch ( $asana_choice ) {
+                case 'workspace':
+                    $choices = $client->workspaces->getWorkspaces();
+                    break;
+    
+                case 'project':
+                    $choices = $client->projects->getProjectsForWorkspace( $settings['asana_workspace'] );
+                    break;
+                
+                case 'section':
+                    $choices = $client->sections->getSectionsForProject( $settings['asana_project'], array( 'opt_expand' => 'memberships' ) );
+                    break;
+    
+                case 'assignee':
+                    $choices = $client->users->getUsersForWorkspace( $settings['asana_workspace'] );
+                    break;
+            }
+    
+            foreach ( $choices as $choice ) {
+                $asana_choices[] = array(
+                    'label' => esc_html__( $choice->name, 'asana-addon' ),
+                    'value' => $choice->gid,
+                    'name'  => $choice->name,
+                );
+            }
+        } catch ( Exception $e ) {
+            // Nothing, this is normal
+            unset( $e );
         }
 
         return $asana_choices;

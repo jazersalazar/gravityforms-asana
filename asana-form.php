@@ -8,8 +8,10 @@ function asana_addon_create_task( $entry, $form ) {
     }
 }
 
-// Prevent loading the code if it's not edit page
+// Skip if it's not edit page
 if ( $_GET['page'] != 'gf_edit_forms' ) return;
+// Skip if there's no form id
+if ( !isset( $_GET['id'] ) ) return;
 
 // Check if the current form is valid asana form
 if ( !GFAsanaAddOn::get_instance()->is_asana_configured( GFAPI::get_form( $_GET['id'] ) ) ) return;
