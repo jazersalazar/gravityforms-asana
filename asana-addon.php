@@ -342,6 +342,11 @@ class GFAsanaAddOn extends GFAddOn {
         wp_die();
     }
 
+    /**
+     * Save asana addon settings inside GF Form
+     *
+     * @since	1.0.0
+     */
     public function set_asana_options() {
         $form_id    = $_POST['form_id'];
         $settings   = $_POST['settings'];
