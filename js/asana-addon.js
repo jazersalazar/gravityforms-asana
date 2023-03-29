@@ -11,7 +11,7 @@ jQuery(document).ready(function ($) {
 
   // Handle pre-form submission
   let form_submitted = false;
-  $('#gform-settings').submit(function (e) {
+  $('.gforms_edit_form #gform-settings').submit(function (e) {
     if (form_submitted) {
       form_submitted = false;
       return;
