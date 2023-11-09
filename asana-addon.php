@@ -213,7 +213,8 @@ class GFAsanaAddOn extends GFAddOn {
         $asana_fields = array();
         foreach ( $project_fields as $project_field ) {
             $field = $project_field->custom_field;
-            $field->options = $field->enum_options ? json_encode( $field->enum_options ) : '';
+            $field->options = '';
+            if(isset($field->enum_options)) $field->options = json_encode( $field->enum_options );
             $asana_fields[ $field->gid ] = $field;
         }
 

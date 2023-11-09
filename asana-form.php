@@ -9,7 +9,7 @@ function asana_addon_create_task( $entry, $form ) {
 }
 
 // Skip if it's not edit page
-if ( $_GET['page'] != 'gf_edit_forms' ) return;
+if ( isset($_GET['page']) && $_GET['page'] != 'gf_edit_forms' ) return;
 // Skip if there's no form id
 if ( !isset( $_GET['id'] ) ) return;
 
